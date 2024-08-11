@@ -1,0 +1,19 @@
+# System files
+.DS_Store
+Thumbs.db
+
+# Generated
+composer.lock
+/vendor/
+
+# IDE
+.vscode/
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS-specific files
+*.bak
+*.tmp
+*.temp

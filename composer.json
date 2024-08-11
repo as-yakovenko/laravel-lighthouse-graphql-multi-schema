@@ -1,0 +1,43 @@
+{
+    "name": "yakovenko/laravel-lighthouse-graphql-multi-schema",
+    "description": "A Laravel package that provides multi-schema support for Lighthouse GraphQL.",
+    "keywords": ["laravel", "laravel-graphql", "lighthouse", "graphql", "multi-schema"],
+    "type": "library",
+    "license": "MIT",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Alexander Yakovenko",
+            "email": "paffen.web@gmail.com",
+            "homepage": "https://github.com/as-yakovenko"
+        }
+    ],
+    "require": {
+        "php": "^8",
+        "nuwave/lighthouse": "^6.0",
+        "laravel/framework": "^9.0 || ^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Yakovenko\\LighthouseGraphqlMultiSchema\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Yakovenko\\LighthouseGraphqlMultiSchema\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Yakovenko\\LighthouseGraphqlMultiSchema\\LighthouseMultiSchemaServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
