@@ -57,11 +57,7 @@ class GraphQLService
             Route::middleware( 'web' )
                 ->prefix( $routeUri)
                 ->group( function () use ( $routeName ) {
-                    Route::post('/', [
-                        'as'   => $routeName,
-                        'uses' => \Nuwave\Lighthouse\Http\GraphQLController::class,
-                    ]);
-                    Route::get('/', [
+                    Route::match(['get', 'post', 'head'], '/', [
                         'as'   => $routeName,
                         'uses' => \Nuwave\Lighthouse\Http\GraphQLController::class,
                     ]);
