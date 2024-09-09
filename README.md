@@ -80,17 +80,6 @@ class VerifyCsrfToken extends Middleware
 }
 ```
 
-**Registration provider**
-
-You need to add your service provider to the providers array in your Laravel application's ```config/app.php``` file:
-
-```php
-'providers' => [
-    // Other providers...
-    Yakovenko\LighthouseGraphqlMultiSchema\LighthouseMultiSchemaServiceProvider::class,
-],
-```
-
 **Create Directories for Each Schema**
 
 Organize your schema files into separate directories for each schema. The structure of these directories and how you split the files is up to you. Here’s an example of one way to organize them:
