@@ -51,13 +51,14 @@ class GraphQLService
     public function registerGraphQLRoutes(): void
     {
         foreach ( $this->multiSchemas as $schemaConfig ) {
-            $routeUri  = $schemaConfig['route_uri'];
-            $routeName = $schemaConfig['route_name'];
+            $routeUri    = $schemaConfig['route_uri'];
+            $routeName   = $schemaConfig['route_name'];
+            $middlewares = $schemaConfig['middleware'] ?? [];
 
-            Route::middleware( 'web' )
-                ->prefix( $routeUri)
+            Route::middleware( array_merge( ['web'], $middlewares ) )
+                ->prefix( $routeUri )
                 ->group( function () use ( $routeName ) {
-                    Route::match(['get', 'post', 'head'], '/', [
+                    Route::match( ['get', 'post', 'head'], '/', [
                         'as'   => $routeName,
                         'uses' => \Nuwave\Lighthouse\Http\GraphQLController::class,
                     ]);

@@ -31,7 +31,7 @@ After installing the package, you need to publish the configuration file by runn
 php artisan lighthouse-multi-schema:publish-config
 ```
 
-This will create a configuration file named lighthouse-multi-schema.php in the config/ directory, where you can set up your GraphQL schemas.
+This will create a configuration file named `lighthouse-multi-schema.php` in the config/ directory, where you can set up your GraphQL schemas.
 
 **Configuration**
 
@@ -40,23 +40,39 @@ In the config/lighthouse-multi-schema.php file, you can define your schemas and 
 ```php
 return [
     'multi_schemas' => [
-        'schema1' => [
-            'route_uri'           => '/schema1-graphql',
-            'route_name'          => 'schema1-graphql',
-            'schema_path'         => base_path("graphql/schema1.graphql"),
-            'schema_cache_path'   => env('LIGHTHOUSE_EXAMPLE_SCHEMA_CACHE_PATH', base_path("bootstrap/cache/schema1-schema.php")),
+        'example' => [
+            'route_uri'           => '/example-graphql',
+            'route_name'          => 'example-graphql',
+            'schema_path'         => base_path("graphql/example.graphql"),
+            'schema_cache_path'   => env('LIGHTHOUSE_EXAMPLE_SCHEMA_CACHE_PATH', base_path("bootstrap/cache/example-schema.php")),
             'schema_cache_enable' => env('LIGHTHOUSE_EXAMPLE_CACHE_ENABLE', false),
+            'middleware' => [
+                // Always set the `Accept: application/json` header.
+                Nuwave\Lighthouse\Http\Middleware\AcceptJson::class,
+
+                // Logs in a user if they are authenticated. In contrast to Laravel's 'auth'
+                // middleware, this delegates auth and permission checks to the field level.
+                Nuwave\Lighthouse\Http\Middleware\AttemptAuthentication::class,
+
+                // Apply your custom middleware here.
+                // For example:
+                // App\Http\Middleware\ExampleSchemaMiddleware::class,
+            ]
         ],
         // Add additional schemas as needed
     ],
 ];
 ```
 
+**Middleware Support**
+
+You can now add middleware specific to each GraphQL schema. This allows you to apply different middleware configurations based on the schema being used. Simply specify the middleware classes in the middleware array for each schema, and they will be applied to the corresponding routes.
+
 **CSRF exceptions**
 
 Add your GraphQL routes to the CSRF exceptions.
 
-Open the App/Http/Middleware/VerifyCsrfToken.php file and add your routes to the $except array.
+Open the `App/Http/Middleware/VerifyCsrfToken.php` file and add your routes to the $except array.
 
 ```php
 <?php
@@ -107,7 +123,7 @@ This command will delete all cached schema files, ensuring that any changes made
 
 **2 - Clear Cache for a Specific Schema**
 
-You can also clear the cache for any other schema by replacing {keyYourSchema} with the desired schema name:
+You can also clear the cache for any other schema by replacing `{keyYourSchema}` with the desired schema name:
 
 ```
 php artisan lighthouse:clear-cache {keyYourSchema}
@@ -118,7 +134,7 @@ example:
 php artisan lighthouse:clear-cache schema1
 ```
 
-Replace {keyYourSchema} with the actual name of the schema you want to target. This will specifically remove the cache for that schema only.
+Replace `{keyYourSchema}` with the actual name of the schema you want to target. This will specifically remove the cache for that schema only.
 
 ### Endpoint Schemas
 
