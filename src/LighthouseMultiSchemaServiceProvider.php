@@ -29,16 +29,15 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
         // Register GraphQLService
         $this->graphQLService = $this->app->make( GraphQLService::class );
 
-        // Retrieve the current request instance
-        $request = $this->app->make( Request::class );
-
         // Register ASTCacheService
-        $this->app->singleton( ASTCache::class, function ( $app ) use ( $request ) {
+        $this->app->singleton( ASTCache::class, function ($app) {
+            $request = $app->make( Request::class );
             return new ASTCacheService( $app['config'], $this->graphQLService, $request );
         });
 
         // Register SchemaSourceProvider
-        $this->app->singleton( SchemaSourceProvider::class, function () use ( $request )  {
+        $this->app->singleton( SchemaSourceProvider::class, function ($app)  {
+            $request = $app->make( Request::class );
             $schemaPath = $this->graphQLService->getSchemaPath( $request->getPathInfo() );
             return new SchemaStitcher( $schemaPath );
         });
