@@ -2,7 +2,8 @@
 
 namespace Yakovenko\LighthouseGraphqlMultiSchema\Services;
 
-use Illuminate\Support\Facades\Route;
+use Illuminate\Container\Container;
+use Nuwave\Lighthouse\Http\GraphQLController;
 
 class GraphQLService
 {
@@ -50,19 +51,24 @@ class GraphQLService
      */
     public function registerGraphQLRoutes(): void
     {
-        foreach ( $this->multiSchemas as $schemaConfig ) {
-            $routeUri    = $schemaConfig['route_uri'];
-            $routeName   = $schemaConfig['route_name'];
-            $middlewares = $schemaConfig['middleware'] ?? [];
+        $container = Container::getInstance();
+        $router = $container->make('router');
 
-            Route::middleware( array_merge( ['web'], $middlewares ) )
-                ->prefix( $routeUri )
-                ->group( function () use ( $routeName ) {
-                    Route::match( ['get', 'post', 'head'], '/', [
-                        'as'   => $routeName,
-                        'uses' => \Nuwave\Lighthouse\Http\GraphQLController::class,
-                    ]);
-                });
+        foreach ( $this->multiSchemas as $schemaConfig ) {
+            $action = [
+                'as' => $schemaConfig['route_name'],
+                'uses' => GraphQLController::class,
+            ];
+
+            if (isset($schemaConfig['middleware'])) {
+                $action['middleware'] = $schemaConfig['middleware'];
+            }
+
+            $router->addRoute(
+                ['GET', 'POST'],
+                $schemaConfig['route_uri'],
+                $action,
+            );
         }
     }
 
