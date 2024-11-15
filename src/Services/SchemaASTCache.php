@@ -3,10 +3,9 @@
 namespace Yakovenko\LighthouseGraphqlMultiSchema\Services;
 
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
-use Illuminate\Http\Request;
 use Nuwave\Lighthouse\Schema\AST\ASTCache;
 
-class ASTCacheService extends ASTCache
+class SchemaASTCache extends ASTCache
 {
     protected bool $cacheEnable;
 
@@ -14,19 +13,17 @@ class ASTCacheService extends ASTCache
      * Constructor.
      *
      * Initializes the ASTCacheService by setting the cache path and cache enable
-     * flag based on the current request URI using the provided GraphQLService.
+     * flag based on the current request URI using the provided graphQLSchemaConfig.
      *
      * @param ConfigRepository $config The configuration repository instance.
-     * @param GraphQLService $graphQLService The GraphQL service instance.
-     * @param Request $request The incoming HTTP request instance.
+     * @param GraphQLSchemaConfig $graphQLSchemaConfig The GraphQL service instance.
      */
-    public function __construct( ConfigRepository $config, GraphQLService $graphQLService, Request $request )
+    public function __construct( ConfigRepository $config, GraphQLSchemaConfig $graphQLSchemaConfig )
     {
         parent::__construct( $config );
 
-        $requestUri        = $request->getPathInfo();
-        $this->path        = $graphQLService->getSchemaCache( $requestUri );
-        $this->cacheEnable = $graphQLService->isCacheEnabled( $requestUri );
+        $this->path        = $graphQLSchemaConfig->getCachePath();
+        $this->cacheEnable = $graphQLSchemaConfig->isCacheEnabled();
     }
 
     /**

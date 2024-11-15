@@ -3,71 +3,78 @@
 namespace Yakovenko\LighthouseGraphqlMultiSchema;
 
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Http\Request;
 use Nuwave\Lighthouse\Schema\Source\SchemaSourceProvider;
 use Nuwave\Lighthouse\Schema\Source\SchemaStitcher;
 use Nuwave\Lighthouse\Schema\AST\ASTCache;
-use Yakovenko\LighthouseGraphqlMultiSchema\Services\ASTCacheService;
-use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLService;
+use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLRouteRegister;
+use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLSchemaConfig;
+use Yakovenko\LighthouseGraphqlMultiSchema\Services\SchemaASTCache;
 
 class LighthouseMultiSchemaServiceProvider extends ServiceProvider
 {
-    protected GraphQLService $graphQLService;
-
     /**
      * Register services.
      *
-     * This method registers various services and configurations required for the 
-     * Lighthouse GraphQL multi-schema functionality. It includes registering the 
-     * GraphQLService, ASTCacheService, SchemaSourceProvider, and configuration files.
-     * Additionally, it registers commands for publishing configuration and clearing cache.
+     * This method registers various services and configurations required for 
+     * the Lighthouse GraphQL multi-schema functionality. It includes registering 
+     * GraphQLSchemaConfig, GraphQLRouteRegister, SchemaASTCache, SchemaSourceProvider, 
+     * and configuration files. Additionally, it registers commands for publishing 
+     * configuration and clearing the cache.
      *
      * @return void
      */
     public function register()
     {
-        // Register GraphQLService
-        $this->graphQLService = $this->app->make( GraphQLService::class );
-
-        // Register ASTCacheService
-        $this->app->singleton( ASTCache::class, function ($app) {
-            $request = $app->make( Request::class );
-            return new ASTCacheService( $app['config'], $this->graphQLService, $request );
+        // Register GraphQLSchemaConfig singleton
+        $this->app->singleton( GraphQLSchemaConfig::class, function () {
+            return new GraphQLSchemaConfig();
         });
 
-        // Register SchemaSourceProvider
-        $this->app->singleton( SchemaSourceProvider::class, function ($app)  {
-            $request = $app->make( Request::class );
-            $schemaPath = $this->graphQLService->getSchemaPath( $request->getPathInfo() );
-            return new SchemaStitcher( $schemaPath );
+        // Register GraphQLRouteRegister without dependency injection
+        $this->app->singleton( GraphQLRouteRegister::class, function () {
+            return new GraphQLRouteRegister();
         });
 
-        // Register configuration
+        // Register SchemaASTCache with dependency on GraphQLSchemaConfig
+        $this->app->singleton( ASTCache::class, function ( $app ) {
+            return new SchemaASTCache(
+                $app['config'],
+                $app->make( GraphQLSchemaConfig::class )
+            );
+        });
+
+        // Register SchemaSourceProvider singleton using SchemaStitcher
+        $this->app->singleton( SchemaSourceProvider::class, function ( $app ) {
+            return new SchemaStitcher( $app->make( GraphQLSchemaConfig::class )->getPath() );
+        });
+
+        // Merge package configuration with application configuration
         $this->mergeConfigFrom(
-            __DIR__.'/lighthouse-multi-schema.php', 'lighthouse-multi-schema'
+            __DIR__ . '/lighthouse-multi-schema.php', 'lighthouse-multi-schema'
         );
 
-        // Register PublishConfigCommand
+        // Register custom commands
         $this->commands([
             \Yakovenko\LighthouseGraphqlMultiSchema\Commands\PublishConfigCommand::class,
             \Yakovenko\LighthouseGraphqlMultiSchema\Commands\LighthouseClearCacheCommand::class
         ]);
     }
 
-
     /**
      * Bootstrap services.
      *
+     * Publishes the configuration file and registers GraphQL routes.
+     *
      * @return void
      */
-    public function boot() 
+    public function boot()
     {
-        // Publishing the configuration file
+        // Publish the configuration file to the application's config directory
         $this->publishes([
-            __DIR__.'/lighthouse-multi-schema.php' => config_path( 'lighthouse-multi-schema.php' ),
+            __DIR__ . '/lighthouse-multi-schema.php' => config_path('lighthouse-multi-schema.php'),
         ], 'config');
 
-        // Register GraphQL routes
-        $this->graphQLService->registerGraphQLRoutes();
+        // Register GraphQL routes by resolving GraphQLRouteRegister from the container
+        $this->app->make( GraphQLRouteRegister::class )->registerGraphQLRoutes();
     }
 }

@@ -40,12 +40,12 @@ In the config/lighthouse-multi-schema.php file, you can define your schemas and 
 ```php
 return [
     'multi_schemas' => [
-        'example' => [
-            'route_uri'           => '/example-graphql',
-            'route_name'          => 'example-graphql',
-            'schema_path'         => base_path("graphql/example.graphql"),
-            'schema_cache_path'   => env('LIGHTHOUSE_EXAMPLE_SCHEMA_CACHE_PATH', base_path("bootstrap/cache/example-schema.php")),
-            'schema_cache_enable' => env('LIGHTHOUSE_EXAMPLE_CACHE_ENABLE', false),
+        'schema1' => [
+            'route_uri'           => '/schema1-graphql',
+            'route_name'          => 'schema1-graphql',
+            'schema_path'         => base_path("graphql/schema1.graphql"),
+            'schema_cache_path'   => env('LIGHTHOUSE_SCHEMA1_CACHE_PATH', base_path("bootstrap/cache/schema1-schema.php")),
+            'schema_cache_enable' => env('LIGHTHOUSE_SCHEMA1_CACHE_ENABLE', false),
             'middleware' => [
                 // Always set the `Accept: application/json` header.
                 Nuwave\Lighthouse\Http\Middleware\AcceptJson::class,
@@ -66,9 +66,32 @@ return [
 
 **Middleware Support**
 
-You can now add middleware specific to each GraphQL schema. This allows you to apply different middleware configurations based on the schema being used. Simply specify the middleware classes in the middleware array for each schema, and they will be applied to the corresponding routes.
+You can now add middleware specific to each GraphQL schema, allowing you to apply different middleware configurations based on the schema being used. Specify the middleware classes in the middleware array for each schema, and they will be applied to the corresponding routes.
 
-**CSRF exceptions**
+**CSRF exceptions Laravel ^11**
+
+To disable CSRF verification for your GraphQL routes in Laravel 11, update `bootstrap/app.php` with the following configuration:
+
+```php
+<?php
+
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Middleware;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withMiddleware(function (Middleware $middleware) {
+        $middleware->validateCsrfTokens(except: [
+            'schema1-graphql',
+            'schema2-graphql',
+            // Add other routes as needed
+        ]);
+    })
+    ->create();
+```
+
+In the code above, routes such as schema1-graphql and schema2-graphql are excluded from CSRF protection. For older Laravel versions, you can still add the routes in VerifyCsrfToken.php.
+
+**CSRF exceptions Laravel  ^9.0 || ^10**
 
 Add your GraphQL routes to the CSRF exceptions.
 
@@ -111,17 +134,25 @@ Organize your schema files into separate directories for each schema. The struct
 
 The lighthouse:clear-cache command is used to manage the cache for your GraphQL schemas. Below are the available usages:
 
-**1 - Clear All Schema Caches**
+**1 - Clear Default Schema Cache**
 
-To clear the cache for all GraphQL schemas, run the following command:
+The following command removes the default schema cache:
 
 ```
 php artisan lighthouse:clear-cache
 ```
 
-This command will delete all cached schema files, ensuring that any changes made to the schemas are reflected the next time they are accessed.
+**2 - Clear All Schema Caches**
 
-**2 - Clear Cache for a Specific Schema**
+To clear the cache for all GraphQL schemas, run:
+
+```
+php artisan lighthouse:clear-cache all
+```
+
+This deletes all cached schema files, ensuring any changes made to the schemas are reflected the next time they are accessed.
+
+**3 - Clear Cache for a Specific Schema**
 
 You can also clear the cache for any other schema by replacing `{keyYourSchema}` with the desired schema name:
 

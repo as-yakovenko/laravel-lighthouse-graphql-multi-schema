@@ -6,7 +6,7 @@ use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
 use Nuwave\Lighthouse\Schema\AST\ASTCache;
 use Symfony\Component\Console\Input\InputArgument;
-use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLService;
+use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLSchemaConfig;
 
 /**
  * Class LighthouseClearCacheCommand
@@ -42,9 +42,9 @@ class LighthouseClearCacheCommand extends Command
      * Create a new command instance.
      *
      * @param Filesystem $filesystem
-     * @param GraphQLService $graphQLService
+     * @param GraphQLSchemaConfig $graphQLSchemaConfig
      */
-    public function __construct( protected Filesystem $filesystem, protected GraphQLService $graphQLService )
+    public function __construct( protected Filesystem $filesystem, protected GraphQLSchemaConfig $graphQLSchemaConfig )
     {
         parent::__construct();
     }
@@ -64,12 +64,21 @@ class LighthouseClearCacheCommand extends Command
 
         if ( $schemaName ) {
 
-            $this->clearSchemaCache( $schemaName );
+            if ( $schemaName === 'all' ) {
+
+                $this->clearAllSchemaCaches( $cache );
+                $this->info( 'All GraphQL AST schema caches deleted.' );
+
+            } else {
+
+                $this->clearSchemaCache( $schemaName );
+
+            }
 
         } else {
 
-            $this->clearAllSchemaCaches( $cache );
-            $this->info( 'All GraphQL AST schema caches deleted.' );
+            $cache->clear();
+            $this->info( 'Default GraphQL schema cache removed.' );
 
         }
     }
@@ -82,45 +91,26 @@ class LighthouseClearCacheCommand extends Command
      */
     protected function clearSchemaCache( string $schemaName ): void
     {
-        if ( $schemaName === 'default' ) {
+        $multiSchemas = $this->graphQLSchemaConfig->multiSchemas;
 
-            $cachePath = config( 'lighthouse.schema_cache.path' );
+        if ( isset( $multiSchemas[$schemaName] ) ) {
 
-            if ( $this->filesystem->exists( $cachePath ) ) {
+            $cachePath = $multiSchemas[$schemaName]['schema_cache_path'] ?? null;
+
+            if ( $cachePath && $this->filesystem->exists( $cachePath ) ) {
 
                 $this->filesystem->delete( $cachePath );
-                $this->info("GraphQL AST schema cache for 'default' schema deleted.");
+                $this->info( "GraphQL AST schema cache for '{$schemaName}' deleted." );
 
             } else {
 
-                $this->warn("Cache file for 'default' schema not found.");
+                $this->warn( "Cache file for '{$schemaName}' not found." );
 
             }
 
         } else {
 
-            $multiSchemas = $this->graphQLService->multiSchemas;
-
-            if ( isset( $multiSchemas[$schemaName] ) ) {
-
-                $cachePath = $multiSchemas[$schemaName]['schema_cache_path'] ?? null;
-
-                if ( $cachePath && $this->filesystem->exists( $cachePath ) ) {
-
-                    $this->filesystem->delete( $cachePath );
-                    $this->info( "GraphQL AST schema cache for '{$schemaName}' deleted." );
-
-                } else {
-
-                    $this->warn( "Cache file for '{$schemaName}' not found." );
-
-                }
-
-            } else {
-
-                $this->warn( "Schema '{$schemaName}' not configured." );
-
-            }
+            $this->warn( "Schema '{$schemaName}' not configured." );
 
         }
     }
@@ -133,7 +123,7 @@ class LighthouseClearCacheCommand extends Command
      */
     protected function clearAllSchemaCaches( ASTCache $cache ): void
     {
-        $multiSchemas = $this->graphQLService->multiSchemas;
+        $multiSchemas = $this->graphQLSchemaConfig->multiSchemas;
 
         foreach ( $multiSchemas as $schemaConfig ) {
 
