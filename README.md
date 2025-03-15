@@ -12,7 +12,7 @@
 ### Requirements
 
 - PHP               : ^8
-- Laravel           : ^9.0 || ^10.0 || ^11.0
+- Laravel           : ^9.0 || ^10.0 || ^11.0 || ^12.0
 - Nuwave Lighthouse : ^6.0
 
 ### Install the Package
