@@ -13,18 +13,28 @@ use Illuminate\Container\Container;
 class SchemaASTCache extends ASTCache
 {
     protected GraphQLSchemaConfig $graphQLSchemaConfig;
-    protected Request $request;
 
     /**
      * @param ConfigRepository $config
      * @param GraphQLSchemaConfig $graphQLSchemaConfig
-     * @param Request $request
+     * @param Request $request - Only used for initial setup, not stored
      */
     public function __construct( ConfigRepository $config, GraphQLSchemaConfig $graphQLSchemaConfig, Request $request )
     {
         parent::__construct( $config );
         $this->graphQLSchemaConfig = $graphQLSchemaConfig;
-        $this->request = $request;
+        // Note: Not storing $request to make it Octane-compatible
+    }
+
+    /**
+     * Get the current request dynamically from the container.
+     * This ensures we always get the current request in Octane environments.
+     *
+     * @return Request
+     */
+    protected function getCurrentRequest(): Request
+    {
+        return Container::getInstance()->make('request');
     }
 
     /**
@@ -34,7 +44,7 @@ class SchemaASTCache extends ASTCache
      */
     protected function getCurrentCachePath(): string
     {
-        return $this->graphQLSchemaConfig->getCachePath( $this->request ) ?? $this->path;
+        return $this->graphQLSchemaConfig->getCachePath( $this->getCurrentRequest() ) ?? $this->path;
     }
 
     /**
@@ -44,7 +54,7 @@ class SchemaASTCache extends ASTCache
      */
     public function isEnabled(): bool
     {
-        return $this->graphQLSchemaConfig->isCacheEnabled( $this->request ) ?? false;
+        return $this->graphQLSchemaConfig->isCacheEnabled( $this->getCurrentRequest() ) ?? false;
     }
 
     /**

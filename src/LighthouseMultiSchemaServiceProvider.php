@@ -35,8 +35,9 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
             return new GraphQLRouteRegister();
         });
 
-        // Register SchemaASTCache with dependency on GraphQLSchemaConfig
-        $this->app->singleton( ASTCache::class, function ( $app ) {
+        // Register SchemaASTCache as bind (not singleton) to make it Octane-compatible
+        // This ensures a fresh instance per request with current request context
+        $this->app->bind( ASTCache::class, function ( $app ) {
             return new SchemaASTCache(
                 $app['config'],
                 $app->make( GraphQLSchemaConfig::class ),
