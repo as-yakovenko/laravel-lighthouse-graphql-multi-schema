@@ -25,8 +25,8 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        // Register GraphQLSchemaConfig singleton
-        $this->app->singleton( GraphQLSchemaConfig::class, function () {
+        // Register GraphQLSchemaConfig bind
+        $this->app->bind( GraphQLSchemaConfig::class, function () {
             return new GraphQLSchemaConfig();
         });
 
@@ -39,13 +39,16 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
         $this->app->singleton( ASTCache::class, function ( $app ) {
             return new SchemaASTCache(
                 $app['config'],
-                $app->make( GraphQLSchemaConfig::class )
+                $app->make( GraphQLSchemaConfig::class ),
+                $app->make('request')
             );
         });
 
-        // Register SchemaSourceProvider singleton using SchemaStitcher
-        $this->app->singleton( SchemaSourceProvider::class, function ( $app ) {
-            return new SchemaStitcher( $app->make( GraphQLSchemaConfig::class )->getPath() );
+        // Register SchemaSourceProvider bind using SchemaStitcher
+        $this->app->bind( SchemaSourceProvider::class, function ( $app ) {
+            return new SchemaStitcher(
+                $app->make( GraphQLSchemaConfig::class)->getPath( $app->make('request') )
+            );
         });
 
         // Merge package configuration with application configuration
