@@ -41,14 +41,14 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
             return new SchemaASTCache(
                 $app['config'],
                 $app->make( GraphQLSchemaConfig::class ),
-                $app->make('request')
+                request()
             );
         });
 
         // Register SchemaSourceProvider bind using SchemaStitcher
         $this->app->bind( SchemaSourceProvider::class, function ( $app ) {
             return new SchemaStitcher(
-                $app->make( GraphQLSchemaConfig::class)->getPath( $app->make('request') )
+                $app->make( GraphQLSchemaConfig::class)->getPath( request() )
             );
         });
 

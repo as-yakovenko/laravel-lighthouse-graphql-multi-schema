@@ -34,7 +34,7 @@ class SchemaASTCache extends ASTCache
      */
     protected function getCurrentRequest(): Request
     {
-        return Container::getInstance()->make('request');
+        return request();
     }
 
     /**
