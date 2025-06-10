@@ -40,8 +40,7 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
         $this->app->bind( ASTCache::class, function ( $app ) {
             return new SchemaASTCache(
                 $app['config'],
-                $app->make( GraphQLSchemaConfig::class ),
-                request()
+                $app->make( GraphQLSchemaConfig::class )
             );
         });
 

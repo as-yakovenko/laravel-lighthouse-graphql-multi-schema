@@ -17,13 +17,11 @@ class SchemaASTCache extends ASTCache
     /**
      * @param ConfigRepository $config
      * @param GraphQLSchemaConfig $graphQLSchemaConfig
-     * @param Request $request - Only used for initial setup, not stored
      */
-    public function __construct( ConfigRepository $config, GraphQLSchemaConfig $graphQLSchemaConfig, Request $request )
+    public function __construct( ConfigRepository $config, GraphQLSchemaConfig $graphQLSchemaConfig )
     {
         parent::__construct( $config );
         $this->graphQLSchemaConfig = $graphQLSchemaConfig;
-        // Note: Not storing $request to make it Octane-compatible
     }
 
     /**

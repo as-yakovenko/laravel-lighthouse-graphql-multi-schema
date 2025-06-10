@@ -85,7 +85,6 @@ class GraphQLSchemaConfig
 
         return match ( $key ) {
             'key'                 => config('lighthouse.route.uri') === $requestPath ? 'default' : null,
-            'route_uri'           => config('lighthouse.route.uri'),
             'schema_path'         => config('lighthouse.schema_path'),
             'schema_cache_path'   => config('lighthouse.schema_cache.path'),
             'schema_cache_enable' => config('lighthouse.schema_cache.enable', false),
