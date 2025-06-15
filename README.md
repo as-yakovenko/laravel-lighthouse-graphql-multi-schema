@@ -15,28 +15,10 @@
 - Laravel           : ^9.0 || ^10.0 || ^11.0 || ^12.0
 - Nuwave Lighthouse : ^6.0
 
-> **New in v2.0.0:** Full support for Laravel Octane and long-lived workers!
+### 🚀 What’s New in v2.0.0
 
-## 🚀 Octane & Worker Support
-
-**Since v2.0.0, this package is fully compatible with [Laravel Octane](https://laravel.com/docs/12.x/octane) and any long-lived worker environment (Swoole, RoadRunner, etc).**
-
-- `ASTCache` and `SchemaSourceProvider` are now registered with `bind` instead of `singleton` to ensure a fresh context per request.
-- This change is required for correct schema resolution and cache separation in Octane/Swoole/RoadRunner.
-
-### ⚠️ Breaking Change
-
-If you relied on `ASTCache` or `SchemaSourceProvider` being singletons, please update your code accordingly.  
-**From v2.0.0, these services are no longer singletons!**
-
-#### How to upgrade
-
-- Clear all caches:  
-  `php artisan config:clear && php artisan cache:clear && php artisan lighthouse:clear-cache`
-- Make sure you do not store the request object in any singleton or static property.
-- Always use the `request()` helper to access the current request in your code.
-
----
+- Full support for **Laravel Octane** and **long-lived workers** (Swoole, RoadRunner, etc).  
+  _See [release notes](https://github.com/as-yakovenko/laravel-lighthouse-graphql-multi-schema/releases/tag/v2.0.0) for technical details._
 
 ### Install the Package
 
@@ -166,28 +148,31 @@ example:
 example:
 ```
 /graphql
-├── web
-│   └── web.graphql ( #import /models/*.graphql, #import /request/*.graphql, general scalar, query and mutation, login, registration )
-│   └── models ( Type, Enum, Input )
-│   │	└── User.graphql
-│   │	└── Order.graphql
-│   │	└── Product.graphql
+│── models ( Type, Enum, Input )  # Shared types, enums, inputs
+│   └── User.graphql
+│   └── Order.graphql
+│   └── Product.graphql
+│
+├── v1 # Entry point for v1, imports shared models and v1-specific queries/mutations
+│   └── v1.graphql ( #import /models/*.graphql, #import /request/*.graphql, general scalar, query and mutation, login, registration )
 │   └── request ( Query, Mutation )
 │   	└── user_request.graphql ( meUpdate, me )
 │   	└── order_request.graphql  ( meOrders )
 │   	└── product_request.graphql ( products, product )
-├── crm
-│   └── crm.graphql ( #import /models/*.graphql, #import /request/*.graphql, general scalar, query and mutation )
+│
+├── v2 # Entry point for v2, can import the same models and only add/override what's new
+│   └── v2.graphql ( #import /models/*.graphql, #import /request/*.graphql, general scalar, query and mutation )
 │   └── request ( Query, Mutation )
-│   │	└── order_request.graphql  ( orders, order )
-│   └── models ( Type, Enum, Input )
-├── adm
-│   └── adm.graphql ( #import /models/*.graphql, #import /request/*.graphql, general scalar, query and mutation )
+│    	└── order_request.graphql  ( orders, order )
+│
+├── v3 # Entry point for v3, can import the same models and only add/override what's new
+│   └── v3.graphql ( #import /models/*.graphql, #import /request/*.graphql, general scalar, query and mutation )
 │   └── request ( Query, Mutation )
 │   │	└── user_request.graphql ( userCreate, userUpdate, userDelete, user, me, users )
 │   │	└── order_request.graphql  ( orders, orders, orderUpdate, orderDelete, orderCreate )
 │   │	└── product_request.graphql ( products, product, productUpdate, productDelete, productCreate )
-│   └── models ( Type, Enum, Input )
+│   └── models ( Type, Enum, Input ) # if you need to personalize models according to the type of scheme
+│
 └── api
     └── api.graphql ( #import /models/*.graphql, #import /request/*.graphql, general scalar, query and mutation )
     └── request ( Query, Mutation )
