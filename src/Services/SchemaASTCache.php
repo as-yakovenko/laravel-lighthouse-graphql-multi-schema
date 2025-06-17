@@ -5,10 +5,6 @@ namespace Yakovenko\LighthouseGraphqlMultiSchema\Services;
 use Illuminate\Contracts\Config\Repository as ConfigRepository;
 use Nuwave\Lighthouse\Schema\AST\ASTCache;
 use Illuminate\Http\Request;
-use Nuwave\Lighthouse\Schema\AST\DocumentAST;
-use Illuminate\Filesystem\Filesystem;
-use Nuwave\Lighthouse\Exceptions\InvalidSchemaCacheContentsException;
-use Illuminate\Container\Container;
 
 class SchemaASTCache extends ASTCache
 {
@@ -36,16 +32,6 @@ class SchemaASTCache extends ASTCache
     }
 
     /**
-     * Get the current cache path for the request.
-     *
-     * @return string
-     */
-    protected function getCurrentCachePath(): string
-    {
-        return $this->graphQLSchemaConfig->getCachePath( $this->getCurrentRequest() ) ?? $this->path;
-    }
-
-    /**
      * Check if the cache is enabled for the current request.
      *
      * @return bool
@@ -56,58 +42,13 @@ class SchemaASTCache extends ASTCache
     }
 
     /**
-     * Set the document AST in the cache.
+     * Get the current cache path for the request.
      *
-     * @param DocumentAST $documentAST
-     * @return void
+     * @return string
      */
-    public function set( DocumentAST $documentAST ): void
+    public function path(): string
     {
-        $variable = var_export( $documentAST->toArray(), true );
-        $this->filesystem()->put(
-            $this->getCurrentCachePath(),
-            /** @lang PHP */ "<?php return {$variable};"
-        );
-    }
-
-    /** @param  callable(): DocumentAST  $build */
-    public function fromCacheOrBuild( callable $build ): DocumentAST
-    {
-        $path = $this->getCurrentCachePath();
-
-        if ( $this->filesystem()->exists( $path ) ) {
-            $ast = require $path;
-            if ( !is_array( $ast ) ) {
-                throw new InvalidSchemaCacheContentsException( $path, $ast );
-            }
-
-            return DocumentAST::fromArray( $ast );
-        }
-
-        $documentAST = $build();
-        $this->set( $documentAST );
-
-        return $documentAST;
-    }
-
-    /**
-     * Clear the cache for the current request.
-     *
-     * @return void
-     */
-    public function clear(): void
-    {
-        $this->filesystem()->delete( $this->getCurrentCachePath() );
-    }
-
-    /**
-     * Get the filesystem instance.
-     *
-     * @return Filesystem
-     */
-    protected function filesystem(): Filesystem
-    {
-        return Container::getInstance()->make( Filesystem::class );
+        return $this->graphQLSchemaConfig->getCachePath( $this->getCurrentRequest() ) ?? $this->path;
     }
 
 }
