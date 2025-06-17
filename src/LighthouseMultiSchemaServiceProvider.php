@@ -9,16 +9,18 @@ use Nuwave\Lighthouse\Schema\AST\ASTCache;
 use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLRouteRegister;
 use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLSchemaConfig;
 use Yakovenko\LighthouseGraphqlMultiSchema\Services\SchemaASTCache;
+use Yakovenko\LighthouseGraphqlMultiSchema\Commands\LighthouseClearCacheCommand;
+use Yakovenko\LighthouseGraphqlMultiSchema\Commands\PublishConfigCommand;
 
 class LighthouseMultiSchemaServiceProvider extends ServiceProvider
 {
     /**
      * Register services.
      *
-     * This method registers various services and configurations required for 
-     * the Lighthouse GraphQL multi-schema functionality. It includes registering 
-     * GraphQLSchemaConfig, GraphQLRouteRegister, SchemaASTCache, SchemaSourceProvider, 
-     * and configuration files. Additionally, it registers commands for publishing 
+     * This method registers various services and configurations required for
+     * the Lighthouse GraphQL multi-schema functionality. It includes registering
+     * GraphQLSchemaConfig, GraphQLRouteRegister, SchemaASTCache, SchemaSourceProvider,
+     * and configuration files. Additionally, it registers commands for publishing
      * configuration and clearing the cache.
      *
      * @return void
@@ -57,10 +59,15 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
         );
 
         // Register custom commands
-        $this->commands([
-            \Yakovenko\LighthouseGraphqlMultiSchema\Commands\PublishConfigCommand::class,
-            \Yakovenko\LighthouseGraphqlMultiSchema\Commands\LighthouseClearCacheCommand::class
-        ]);
+        $this->commands( [PublishConfigCommand::class] );
+
+        // Force override of lighthouse:clear-cache command
+        $this->app->singleton( 'command.lighthouse.clear-cache', function ( $app ) {
+            return new LighthouseClearCacheCommand(
+                $app['files'],
+                $app->make( GraphQLSchemaConfig::class )
+            );
+        });
     }
 
     /**
@@ -79,5 +86,10 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
 
         // Register GraphQL routes by resolving GraphQLRouteRegister from the container
         $this->app->make( GraphQLRouteRegister::class )->registerGraphQLRoutes();
+
+        // Register overridden command
+        if ( $this->app->runningInConsole() ) {
+            $this->commands( ['command.lighthouse.clear-cache'] );
+        }
     }
 }
