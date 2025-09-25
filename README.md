@@ -15,8 +15,15 @@
 - Laravel           : ^9.0 || ^10.0 || ^11.0 || ^12.0
 - Nuwave Lighthouse : ^6.0
 
-### 🚀 What’s New in v2.0.0
+### 🚀 What's New
 
+#### v2.1.0
+- **Multi-Schema IDE Helper**: Generate IDE helper files for individual schemas
+- **Multi-Schema Validation**: Validate GraphQL schemas with detailed error reporting
+- Full compatibility with standard Lighthouse commands
+- Schema isolation and safe file generation
+
+#### v2.0.0
 - Full support for **Laravel Octane** and **long-lived workers** (Swoole, RoadRunner, etc).  
   _See [release notes](https://github.com/as-yakovenko/laravel-lighthouse-graphql-multi-schema/releases/tag/v2.0.0) for technical details._
 
@@ -179,7 +186,11 @@ example:
     └── models ( Type, Enum, Input )
 ```
 
-### Console Command Example
+### Console Commands
+
+The package provides several commands for managing your GraphQL schemas:
+
+#### Cache Management
 
 The lighthouse:clear-cache command is used to manage the cache for your GraphQL schemas. Below are the available usages:
 
@@ -215,6 +226,48 @@ php artisan lighthouse:clear-cache schema1
 ```
 
 Replace `{keyYourSchema}` with the actual name of the schema you want to target. This will specifically remove the cache for that schema only.
+
+#### IDE Helper Generation
+
+Generate IDE helper files for improved type checking and autocompletion:
+
+```bash
+# Generate for default schema
+php artisan lighthouse:multi-ide-helper
+
+# Generate for specific schema
+php artisan lighthouse:multi-ide-helper --schema=library
+```
+
+This creates schema-specific helper files:
+- `schema-directives-{schema}.graphql`
+- `programmatic-types-{schema}.graphql`
+- `_lighthouse_ide_helper.php` (for default schema only)
+
+#### Schema Validation
+
+Validate GraphQL schemas to catch errors before deployment:
+
+```bash
+# Validate default schema
+php artisan lighthouse:multi-validate-schema
+
+# Validate specific schema
+php artisan lighthouse:multi-validate-schema --schema=library
+```
+
+**Supported Error Types:**
+- Syntax errors (malformed GraphQL)
+- Type errors (undefined types)
+- Directive errors (undefined directives)
+- Structural errors (invalid schema structure)
+
+**CI/CD Integration:**
+```bash
+# Add to your deployment pipeline
+php artisan lighthouse:multi-validate-schema
+php artisan lighthouse:multi-ide-helper
+```
 
 ### Endpoint Schemas
 

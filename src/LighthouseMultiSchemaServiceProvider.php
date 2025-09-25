@@ -11,6 +11,8 @@ use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLSchemaConfig;
 use Yakovenko\LighthouseGraphqlMultiSchema\Services\SchemaASTCache;
 use Yakovenko\LighthouseGraphqlMultiSchema\Commands\LighthouseClearCacheCommand;
 use Yakovenko\LighthouseGraphqlMultiSchema\Commands\PublishConfigCommand;
+use Yakovenko\LighthouseGraphqlMultiSchema\Commands\MultiSchemaIdeHelperCommand;
+use Yakovenko\LighthouseGraphqlMultiSchema\Commands\MultiSchemaValidateCommand;
 
 class LighthouseMultiSchemaServiceProvider extends ServiceProvider
 {
@@ -59,7 +61,11 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
         );
 
         // Register custom commands
-        $this->commands( [PublishConfigCommand::class] );
+        $this->commands( [
+            PublishConfigCommand::class,
+            MultiSchemaIdeHelperCommand::class,
+            MultiSchemaValidateCommand::class
+        ] );
 
         // Force override of lighthouse:clear-cache command
         $this->app->singleton( 'command.lighthouse.clear-cache', function ( $app ) {
