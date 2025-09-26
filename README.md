@@ -17,7 +17,7 @@
 
 ### 🚀 What's New
 
-#### v2.1.0
+#### v2.2.0
 - **Multi-Schema IDE Helper**: Generate IDE helper files for individual schemas
 - **Multi-Schema Validation**: Validate GraphQL schemas with detailed error reporting
 - Full compatibility with standard Lighthouse commands
