@@ -3,14 +3,19 @@
 namespace Yakovenko\LighthouseGraphqlMultiSchema;
 
 use Illuminate\Support\ServiceProvider;
+use Nuwave\Lighthouse\GraphQL;
+use Nuwave\Lighthouse\Schema\AST\ASTBuilder;
+use Nuwave\Lighthouse\Schema\AST\ASTCache;
+use Nuwave\Lighthouse\Schema\DirectiveLocator;
+use Nuwave\Lighthouse\Schema\SchemaBuilder;
 use Nuwave\Lighthouse\Schema\Source\SchemaSourceProvider;
 use Nuwave\Lighthouse\Schema\Source\SchemaStitcher;
-use Nuwave\Lighthouse\Schema\AST\ASTCache;
+use Nuwave\Lighthouse\Schema\TypeRegistry;
+use Yakovenko\LighthouseGraphqlMultiSchema\Commands\LighthouseClearCacheCommand;
+use Yakovenko\LighthouseGraphqlMultiSchema\Commands\PublishConfigCommand;
 use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLRouteRegister;
 use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLSchemaConfig;
 use Yakovenko\LighthouseGraphqlMultiSchema\Services\SchemaASTCache;
-use Yakovenko\LighthouseGraphqlMultiSchema\Commands\LighthouseClearCacheCommand;
-use Yakovenko\LighthouseGraphqlMultiSchema\Commands\PublishConfigCommand;
 
 class LighthouseMultiSchemaServiceProvider extends ServiceProvider
 {
@@ -27,8 +32,8 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        // Register GraphQLSchemaConfig bind
-        $this->app->bind( GraphQLSchemaConfig::class, function () {
+        // Register GraphQLSchemaConfig as scoped (one per request, flushed between Octane requests)
+        $this->app->scoped( GraphQLSchemaConfig::class, function () {
             return new GraphQLSchemaConfig();
         });
 
@@ -37,17 +42,16 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
             return new GraphQLRouteRegister();
         });
 
-        // Register SchemaASTCache as bind (not singleton) to make it Octane-compatible
-        // This ensures a fresh instance per request with current request context
-        $this->app->bind( ASTCache::class, function ( $app ) {
+        // Register SchemaASTCache as scoped (one per request, flushed between Octane requests)
+        $this->app->scoped( ASTCache::class, function ( $app ) {
             return new SchemaASTCache(
                 $app['config'],
                 $app->make( GraphQLSchemaConfig::class )
             );
         });
 
-        // Register SchemaSourceProvider bind using SchemaStitcher
-        $this->app->bind( SchemaSourceProvider::class, function ( $app ) {
+        // Register SchemaSourceProvider as scoped (one per request, flushed between Octane requests)
+        $this->app->scoped( SchemaSourceProvider::class, function ( $app ) {
             return new SchemaStitcher(
                 $app->make( GraphQLSchemaConfig::class )->getPath( request() )
             );
@@ -83,6 +87,16 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__ . '/lighthouse-multi-schema.php' => config_path('lighthouse-multi-schema.php'),
         ], 'config');
+
+        // Override Lighthouse's singletons with scoped bindings for Octane/Swoole compatibility.
+        // Lighthouse registers GraphQL, SchemaBuilder, ASTBuilder, DirectiveLocator, and TypeRegistry
+        // as singletons which cache schema state. Under Octane, these persist across requests,
+        // breaking multi-schema switching. Scoped bindings are flushed between requests automatically.
+        $this->app->scoped( GraphQL::class );
+        $this->app->scoped( SchemaBuilder::class );
+        $this->app->scoped( ASTBuilder::class );
+        $this->app->scoped( DirectiveLocator::class );
+        $this->app->scoped( TypeRegistry::class );
 
         // Register GraphQL routes by resolving GraphQLRouteRegister from the container
         $this->app->make( GraphQLRouteRegister::class )->registerGraphQLRoutes();
