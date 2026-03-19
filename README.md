@@ -7,12 +7,24 @@
 
 `yakovenko/laravel-lighthouse-graphql-multi-schema` is a Laravel package that provides multi-schema support for Lighthouse GraphQL. It allows you to manage multiple GraphQL schemas within a single Laravel application, streamlining development and extending functionality.
 
+## Why use this package?
+
+Managing multiple GraphQL schemas in a single Laravel application can quickly become complex.
+
+This package is useful when:
+
+- You need API versioning (v1, v2, v3)
+- You separate admin and public APIs
+- You build modular or domain-driven architectures
+
+It provides a clean, scalable, and production-ready solution for handling multiple schemas with Laravel Lighthouse.
+
 ## Installation
 
 ### Requirements
 
 - PHP               : ^8
-- Laravel           : ^9.0 || ^10.0 || ^11.0 || ^12.0
+- Laravel           : ^9.0 || ^10.0 || ^11.0 || ^12.0 || ^13.0
 - Nuwave Lighthouse : ^6.0
 
 ### 🚀 What's New
@@ -285,6 +297,9 @@ Schema 3: Access the GraphQL schema at:
 Once configured, you can use the defined routes for each schema in your application. Each route will utilize its corresponding GraphQL schema. You have a multi-schema setup that allows for an unlimited number of access points, each supporting various mutations and queries tailored to your specific needs. You can define each schema according to your project requirements.
 This flexibility allows you to create distinct schemas for different parts of your application, ensuring that each area can have customized queries and mutations as needed.
 
-**Author**
+## Author
 
-- **Alexander Yakovenko** - [GitHub](https://github.com/as-yakovenko) - [Email](mailto:paffen.web@gmail.com)
+**Alexander Yakovenko**  
+Backend Engineer (Laravel, GraphQL, High-load systems)  
+- [GitHub](https://github.com/as-yakovenko) 
+- [Email](mailto:paffen.web@gmail.com)
