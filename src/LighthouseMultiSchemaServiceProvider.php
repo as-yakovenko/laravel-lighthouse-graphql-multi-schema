@@ -12,6 +12,8 @@ use Nuwave\Lighthouse\Schema\Source\SchemaSourceProvider;
 use Nuwave\Lighthouse\Schema\Source\SchemaStitcher;
 use Nuwave\Lighthouse\Schema\TypeRegistry;
 use Yakovenko\LighthouseGraphqlMultiSchema\Commands\LighthouseClearCacheCommand;
+use Yakovenko\LighthouseGraphqlMultiSchema\Commands\MultiSchemaCacheCommand;
+use Yakovenko\LighthouseGraphqlMultiSchema\Commands\MultiSchemaClearCommand;
 use Yakovenko\LighthouseGraphqlMultiSchema\Commands\MultiSchemaIdeHelperCommand;
 use Yakovenko\LighthouseGraphqlMultiSchema\Commands\MultiSchemaValidateCommand;
 use Yakovenko\LighthouseGraphqlMultiSchema\Commands\PublishConfigCommand;
@@ -80,6 +82,8 @@ class LighthouseMultiSchemaServiceProvider extends ServiceProvider
         // Register custom commands
         $this->commands([
             PublishConfigCommand::class,
+            MultiSchemaCacheCommand::class,
+            MultiSchemaClearCommand::class,
             MultiSchemaIdeHelperCommand::class,
             MultiSchemaValidateCommand::class,
         ]);

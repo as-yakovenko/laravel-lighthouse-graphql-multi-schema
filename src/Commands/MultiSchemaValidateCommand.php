@@ -3,112 +3,175 @@
 namespace Yakovenko\LighthouseGraphqlMultiSchema\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Filesystem\Filesystem;
+use Nuwave\Lighthouse\Schema\AST\ASTBuilder;
+use Nuwave\Lighthouse\Schema\AST\ASTCache;
+use Nuwave\Lighthouse\Schema\DirectiveLocator;
+use Nuwave\Lighthouse\Schema\SchemaBuilder;
 use Nuwave\Lighthouse\Schema\Source\SchemaStitcher;
-use Nuwave\Lighthouse\Schema\Validator as SchemaValidator;
-use Symfony\Component\Console\Input\InputOption;
+use Nuwave\Lighthouse\Schema\TypeRegistry;
 use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLSchemaConfig;
 
 class MultiSchemaValidateCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $name = 'lighthouse:multi-validate-schema';
+    protected $aliases = ['lighthouse:multi-validate-schema'];
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Validate GraphQL schemas (default or specified).';
+    protected $description = 'Validate GraphQL schemas.';
 
-    /**
-     * Handle the command.
-     *
-     * @param SchemaValidator $schemaValidator The schema validator instance.
-     * @return int The exit code.
-     */
-    public function handle( SchemaValidator $schemaValidator ): int
+    protected $signature = 'lighthouse:multi-validate
+        {schema? : Schema name to validate. If omitted, all schemas will be validated.}
+        {--schema= : [deprecated] Use positional argument instead: lighthouse:multi-validate admin}';
+
+    public function handle(): int
     {
-        $schemaConfig   = app( GraphQLSchemaConfig::class );
-        $schemas        = $schemaConfig->multiSchemas;
+        $schemas = $this->resolveSchemas();
 
-        // Add main schema
-        $schemas['default'] = [
-            'schema_path'   => config( 'lighthouse.schema_path' ),
-            'route_uri'     => config( 'lighthouse.route.uri' ),
-        ];
-
-        $selectedSchema = $this->option( 'schema' );
+        $selectedSchema = $this->resolveSchemaArgument();
 
         if ( $selectedSchema ) {
             if ( !isset( $schemas[$selectedSchema] ) ) {
                 $this->error( "Schema '{$selectedSchema}' not found." );
-                $this->info( 'Available schemas: ' . implode( ', ', array_keys( $schemas) ) );
+                $this->info( 'Available schemas: ' . implode( ', ', array_keys( $schemas ) ) );
                 return 1;
             }
 
-            $this->info("Validating schema: {$selectedSchema}");
-            $this->validateSchema( $selectedSchema, $schemas[$selectedSchema], $schemaValidator );
+            $this->info( "Validating schema: {$selectedSchema}" );
+            $failed = !$this->validateSchema( $selectedSchema, $schemas[$selectedSchema] );
         } else {
-            // By default validate only main schema
-            $this->info( "Validating default schema" );
-            $this->validateSchema( 'default', $schemas['default'], $schemaValidator );
+            $failed = false;
+            foreach ( $schemas as $key => $schemaData ) {
+                $this->info( "Validating schema: {$key}" );
+                if ( !$this->validateSchema( $key, $schemaData ) ) {
+                    $failed = true;
+                }
+            }
         }
 
-        $this->info("\nAll selected schemas are valid.");
+        if ( !$failed ) {
+            $this->info( "\nAll selected schemas are valid." );
+        }
 
-        return 0;
+        return $failed ? 1 : 0;
     }
 
     /**
-     * Validate the schema.
+     * Validate a specific schema.
      *
-     * @param string $schemaKey The key of the schema.
+     * @param string $schemaKey The name of the schema to validate.
      * @param array $schemaData The schema data.
-     * @param SchemaValidator $schemaValidator The schema validator instance.
-     * @return void
+     * @return bool True if the schema was validated successfully, false otherwise.
      */
-    protected function validateSchema( string $schemaKey, array $schemaData, SchemaValidator $schemaValidator ): void
+    protected function validateSchema( string $schemaKey, array $schemaData ): bool
     {
         $schemaPath = $schemaData['schema_path'];
 
         if ( !file_exists( $schemaPath ) ) {
-            $this->warn("Schema file not found: {$schemaPath}");
-            return;
+            $this->warn( "  ⚠ '{$schemaKey}' — schema file not found: {$schemaPath}" );
+            return false;
         }
 
-        // Save original SchemaSourceProvider
-        $originalProvider = app( \Nuwave\Lighthouse\Schema\Source\SchemaSourceProvider::class );
+        // Save services that will be temporarily rebound
+        $saved = [
+            ASTCache::class      => app( ASTCache::class ),
+            TypeRegistry::class  => app( TypeRegistry::class ),
+            ASTBuilder::class    => app( ASTBuilder::class ),
+            SchemaBuilder::class => app( SchemaBuilder::class ),
+        ];
 
         try {
-            // Create temporary SchemaSourceProvider for this schema
-            $schemaSourceProvider = new SchemaStitcher( $schemaPath );
+            // Noop ASTCache: Validator calls $cache->clear() internally — override it to a
+            // no-op so we never touch real cache files on disk during validation.
+            $noopCache = $this->makeNoopAstCache();
 
-            // Temporarily replace SchemaSourceProvider
-            app()->instance( \Nuwave\Lighthouse\Schema\Source\SchemaSourceProvider::class, $schemaSourceProvider );
+            // Fresh TypeRegistry per schema: prevents programmatic types (SortOrder, etc.)
+            // registered by directive manipulators from one schema leaking into the next.
+            $typeRegistry = app()->build( TypeRegistry::class );
 
-            // Clear schema cache for forced recreation
-            app( \Nuwave\Lighthouse\Schema\AST\ASTCache::class )->clear();
+            // Fresh ASTBuilder: resets $documentAST memoization so each schema is built
+            // from scratch. DirectiveLocator comes from the container — it holds directive
+            // class registrations set up by service providers (needed for manipulators).
+            $astBuilder = new ASTBuilder(
+                app( DirectiveLocator::class ),
+                new SchemaStitcher( $schemaPath ),
+                app( Dispatcher::class ),
+                $noopCache,
+            );
 
-            // Use the injected validator
-            $schemaValidator->validate();
+            // Fresh SchemaBuilder: resets $schema memoization. Validator mutates
+            // $schema->getConfig()->directives[] to add directive definitions before
+            // assertValid() — a fresh instance ensures no leftover directives from prior schemas.
+            $schemaBuilder = new SchemaBuilder( $typeRegistry, $astBuilder );
 
-            $this->info("✓ Schema '{$schemaKey}' is valid.");
+            // Rebind in container so Validator resolves fresh instances via app()->make()
+            app()->instance( ASTCache::class, $noopCache );
+            app()->instance( TypeRegistry::class, $typeRegistry );
+            app()->instance( ASTBuilder::class, $astBuilder );
+            app()->instance( SchemaBuilder::class, $schemaBuilder );
 
+            // Build a fresh Validator using rebound container dependencies
+            app()->build( \Nuwave\Lighthouse\Schema\Validator::class )->validate();
+
+            $this->info( "  ✓ '{$schemaKey}' is valid." );
+
+            return true;
+        } catch ( \Throwable $e ) {
+            $this->error( "  ✗ '{$schemaKey}' is invalid:\n" . $e->getMessage() );
+            return false;
         } finally {
-            // Restore original SchemaSourceProvider
-            app()->instance( \Nuwave\Lighthouse\Schema\Source\SchemaSourceProvider::class, $originalProvider );
+            foreach ( $saved as $abstract => $instance ) {
+                app()->instance( $abstract, $instance );
+            }
         }
     }
 
-    /** @return array<int, array<int, mixed>> */
-    protected function getOptions(): array
+    /**
+     * ASTCache that never reads, writes, or deletes any file.
+     * Validator calls clear() and set() internally — override both to no-ops so
+     * validate never touches real cache files on disk.
+     *
+     * @return ASTCache
+     */
+    protected function makeNoopAstCache(): ASTCache
     {
-        return [
-            ['schema', 's', InputOption::VALUE_OPTIONAL, 'Validate specific schema (default: main schema).'],
+        return new class( app( 'config' ), app( Filesystem::class ) ) extends ASTCache {
+            public function isEnabled(): bool { return false; }
+            public function clear(): void {}
+            public function set( \Nuwave\Lighthouse\Schema\AST\DocumentAST $documentAST ): void {}
+        };
+    }
+
+    /**
+     * Resolve the schema argument.
+     *
+     * @return string|null The schema argument.
+     */
+    protected function resolveSchemaArgument(): ?string
+    {
+        $arg    = $this->argument( 'schema' );
+        $option = $this->option( 'schema' );
+
+        if ( $option && !$arg ) {
+            $this->warn( 'The --schema= option is deprecated. Use positional argument: lighthouse:multi-validate admin' );
+        }
+
+        return $arg ?? $option ?? null;
+    }
+
+    /**
+     * Resolve the schemas.
+     *
+     * @return array<string, array<string, string>> The schemas.
+     */
+    protected function resolveSchemas(): array
+    {
+        $schemas = app( GraphQLSchemaConfig::class )->multiSchemas;
+
+        $schemas['default'] = [
+            'schema_path' => config( 'lighthouse.schema_path' ),
+            'route_uri'   => config( 'lighthouse.route.uri' ),
         ];
+
+        return $schemas;
     }
 }

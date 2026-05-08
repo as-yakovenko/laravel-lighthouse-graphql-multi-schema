@@ -2,304 +2,301 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/yakovenko/laravel-lighthouse-graphql-multi-schema.svg?style=flat-square)](https://packagist.org/packages/yakovenko/laravel-lighthouse-graphql-multi-schema)
 [![Total Downloads](https://img.shields.io/packagist/dt/yakovenko/laravel-lighthouse-graphql-multi-schema.svg?style=flat-square)](https://packagist.org/packages/yakovenko/laravel-lighthouse-graphql-multi-schema)
+[![PHP Version](https://img.shields.io/packagist/php-v/yakovenko/laravel-lighthouse-graphql-multi-schema.svg?style=flat-square)](https://packagist.org/packages/yakovenko/laravel-lighthouse-graphql-multi-schema)
 [![License](https://img.shields.io/packagist/l/yakovenko/laravel-lighthouse-graphql-multi-schema.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
+Run multiple independent GraphQL schemas in a single Laravel application. Each schema gets its own route, middleware, cache, and developer tooling - with full support for Laravel Octane.
 
-`yakovenko/laravel-lighthouse-graphql-multi-schema` is a Laravel package that provides multi-schema support for Lighthouse GraphQL. It allows you to manage multiple GraphQL schemas within a single Laravel application, streamlining development and extending functionality.
+**Typical use cases:** admin vs public API, API versioning (v1/v2/v3), domain-driven or modular architectures.
 
-## Why use this package?
+---
 
-Managing multiple GraphQL schemas in a single Laravel application can quickly become complex.
+## 🚀 Key Features
 
-This package is useful when:
+- **Schema Isolation** - separate endpoints for Admin, Public, Mobile, or any other API surface
+- **Independent Caching** - each schema has its own cache file, critical for production performance
+- **Per-schema Middleware** - apply auth or any custom middleware independently per schema
+- **Developer Tooling** - dedicated IDE helpers and validation commands for each schema
+- **Octane Ready** - full support for Laravel Octane, Swoole, RoadRunner, and FrankenPHP
 
-- You need API versioning (v1, v2, v3)
-- You separate admin and public APIs
-- You build modular or domain-driven architectures
+---
 
-It provides a clean, scalable, and production-ready solution for handling multiple schemas with Laravel Lighthouse.
+## 📦 Requirements
 
-## Installation
+| Dependency | Version |
+|---|---|
+| PHP | `^8` |
+| Laravel | `^9.0` \| `^10.0` \| `^11.0` \| `^12.0` \| `^13.0` |
+| Nuwave Lighthouse | `^6.0` |
 
-### Requirements
+---
 
-- PHP               : ^8
-- Laravel           : ^9.0 || ^10.0 || ^11.0 || ^12.0 || ^13.0
-- Nuwave Lighthouse : ^6.0
+## ⚙️ Installation
 
-### 🚀 What's New
-
-#### v2.2.0
-- **Multi-Schema IDE Helper**: Generate IDE helper files for individual schemas
-- **Multi-Schema Validation**: Validate GraphQL schemas with detailed error reporting
-- Full compatibility with standard Lighthouse commands
-- Schema isolation and safe file generation
-
-#### v2.0.0
-- Full support for **Laravel Octane** and **long-lived workers** (Swoole, RoadRunner, etc).  
-  _See [release notes](https://github.com/as-yakovenko/laravel-lighthouse-graphql-multi-schema/releases/tag/v2.0.0) for technical details._
-
-### Install the Package
-
-You can install the package using Composer:
+**1. Install via Composer**
 
 ```bash
 composer require yakovenko/laravel-lighthouse-graphql-multi-schema
 ```
 
-**Publish Configuration**
-
-After installing the package, you need to publish the configuration file by running the following command:
+**2. Publish the configuration**
 
 ```bash
 php artisan lighthouse-multi-schema:publish-config
 ```
 
-This will create a configuration file named `lighthouse-multi-schema.php` in the config/ directory, where you can set up your GraphQL schemas.
+This creates `config/lighthouse-multi-schema.php` where you define your schemas.
 
-**Configuration**
+---
 
-In the config/lighthouse-multi-schema.php file, you can define your schemas and their settings. Here's an example configuration:
+## 🔧 Configuration
+
+Each schema entry requires a route URI, a schema file path, and optionally cache settings and middleware.
 
 ```php
+// config/lighthouse-multi-schema.php
+
 return [
     'multi_schemas' => [
-        'schema1' => [
-            'route_uri'           => '/schema1-graphql',
-            'route_name'          => 'schema1-graphql',
-            'schema_path'         => base_path("graphql/schema1.graphql"),
-            'schema_cache_path'   => env('LIGHTHOUSE_SCHEMA1_CACHE_PATH', base_path("bootstrap/cache/schema1-schema.php")),
-            'schema_cache_enable' => env('LIGHTHOUSE_SCHEMA1_CACHE_ENABLE', false),
+
+        'admin' => [
+            'route_uri'           => '/admin-graphql',
+            'route_name'          => 'admin-graphql',
+            'schema_path'         => base_path('graphql/admin.graphql'),
+            'schema_cache_path'   => base_path('bootstrap/cache/admin-schema.php'),
+            'schema_cache_enable' => env('LIGHTHOUSE_ADMIN_CACHE_ENABLE', false),
             'middleware' => [
-                // Always set the `Accept: application/json` header.
-                Nuwave\Lighthouse\Http\Middleware\AcceptJson::class,
-
-                // Logs in a user if they are authenticated. In contrast to Laravel's 'auth'
-                // middleware, this delegates auth and permission checks to the field level.
-                Nuwave\Lighthouse\Http\Middleware\AttemptAuthentication::class,
-
-                // Apply your custom middleware here.
-                // For example:
-                // App\Http\Middleware\ExampleSchemaMiddleware::class,
-            ]
+                \Nuwave\Lighthouse\Http\Middleware\AcceptJson::class,
+                \Nuwave\Lighthouse\Http\Middleware\AttemptAuthentication::class,
+                'auth:sanctum',
+            ],
         ],
-        'schema2' => [
-            'route_uri'           => '/schema2-graphql',
-            'route_name'          => 'schema2-graphql',
-            'schema_path'         => base_path("graphql/schema2.graphql"),
-            'schema_cache_path'   => env('LIGHTHOUSE_SCHEMA2_CACHE_PATH', base_path("bootstrap/cache/schema2-schema.php")),
-            'schema_cache_enable' => env('LIGHTHOUSE_SCHEMA2_CACHE_ENABLE', false),
-            'middleware' => [ ... ]
+
+        'public' => [
+            'route_uri'           => '/graphql',
+            'route_name'          => 'public-graphql',
+            'schema_path'         => base_path('graphql/schema.graphql'),
+            'schema_cache_path'   => base_path('bootstrap/cache/public-schema.php'),
+            'schema_cache_enable' => env('LIGHTHOUSE_PUBLIC_CACHE_ENABLE', false),
+            'middleware' => [
+                \Nuwave\Lighthouse\Http\Middleware\AcceptJson::class,
+                \Nuwave\Lighthouse\Http\Middleware\AttemptAuthentication::class,
+            ],
         ],
-        // Add additional schemas as needed
+
     ],
 ];
 ```
 
-**Middleware Support**
+> The `default` Lighthouse schema (configured via `lighthouse.schema_path`) continues to work as before - this package only extends it.
 
-You can now add middleware specific to each GraphQL schema, allowing you to apply different middleware configurations based on the schema being used. Specify the middleware classes in the middleware array for each schema, and they will be applied to the corresponding routes.
+---
 
-**CSRF exceptions Laravel ^11**
+## 🛡️ CSRF Protection
 
-To disable CSRF verification for your GraphQL routes in Laravel 11, update `bootstrap/app.php` with the following configuration:
+GraphQL routes use `POST` and should be excluded from CSRF verification.
 
-```php
-<?php
-
-use Illuminate\Foundation\Application;
-use Illuminate\Foundation\Configuration\Middleware;
-
-return Application::configure(basePath: dirname(__DIR__))
-    ->withMiddleware(function (Middleware $middleware) {
-        $middleware->validateCsrfTokens(except: [
-            'schema1-graphql',
-            'schema2-graphql',
-            // Add other routes as needed
-        ]);
-    })
-    ->create();
-```
-
-In the code above, routes such as schema1-graphql and schema2-graphql are excluded from CSRF protection. For older Laravel versions, you can still add the routes in VerifyCsrfToken.php.
-
-**CSRF exceptions Laravel  ^9.0 || ^10**
-
-Add your GraphQL routes to the CSRF exceptions.
-
-Open the `App/Http/Middleware/VerifyCsrfToken.php` file and add your routes to the $except array.
+**Laravel 11+ - `bootstrap/app.php`**
 
 ```php
-<?php
-
-namespace App\Http\Middleware;
-
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as Middleware;
-
-class VerifyCsrfToken extends Middleware
-{
-    /**
-     * The URIs that should be excluded from CSRF verification.
-     *
-     * @var array<int, string>
-     */
-    protected $except = [
-        'schema1-graphql',
-        'schema2-graphql',
-        // Add other routes as needed
-    ];
-}
+->withMiddleware(function (Middleware $middleware) {
+    $middleware->validateCsrfTokens(except: [
+        '/admin-graphql',
+        '/graphql',
+    ]);
+})
 ```
 
-**Create Directories for Each Schema**
+**Laravel 9 / 10 - `app/Http/Middleware/VerifyCsrfToken.php`**
 
-Organize your schema files into separate directories for each schema. The structure of these directories and how you split the files is up to you. Here's an example of one way to organize them:
-
-example:
-```
-/graphql
-├── schema.graphql
-├── schema1.graphql
-├── schema2.graphql
-└── schema3.graphql
+```php
+protected $except = [
+    '/admin-graphql',
+    '/graphql',
+];
 ```
 
-example:
-```
-/graphql
-│── models ( Type, Enum, Input )  # Shared types, enums, inputs
-│   └── User.graphql
-│   └── Order.graphql
-│   └── Product.graphql
-│
-├── v1 # Entry point for v1, imports shared models and v1-specific queries/mutations
-│   └── v1.graphql ( #import /models/*.graphql, #import /request/*.graphql, general scalar, query and mutation, login, registration )
-│   └── request ( Query, Mutation )
-│   	└── user_request.graphql ( meUpdate, me )
-│   	└── order_request.graphql  ( meOrders )
-│   	└── product_request.graphql ( products, product )
-│
-├── v2 # Entry point for v2, can import the same models and only add/override what's new
-│   └── v2.graphql ( #import /models/*.graphql, #import /request/*.graphql, general scalar, query and mutation )
-│   └── request ( Query, Mutation )
-│    	└── order_request.graphql  ( orders, order )
-│
-├── v3 # Entry point for v3, can import the same models and only add/override what's new
-│   └── v3.graphql ( #import /models/*.graphql, #import /request/*.graphql, general scalar, query and mutation )
-│   └── request ( Query, Mutation )
-│   │	└── user_request.graphql ( userCreate, userUpdate, userDelete, user, me, users )
-│   │	└── order_request.graphql  ( orders, orders, orderUpdate, orderDelete, orderCreate )
-│   │	└── product_request.graphql ( products, product, productUpdate, productDelete, productCreate )
-│   └── models ( Type, Enum, Input ) # if you need to personalize models according to the type of scheme
-│
-└── api
-    └── api.graphql ( #import /models/*.graphql, #import /request/*.graphql, general scalar, query and mutation )
-    └── request ( Query, Mutation )
-    └── models ( Type, Enum, Input )
-```
+---
 
-### Console Commands
+## 💻 Artisan Commands
 
-The package provides several commands for managing your GraphQL schemas:
+### Quick Reference
 
-#### Cache Management
+| Command | Description |
+|---|---|
+| `lighthouse:multi-cache [schema]` | Compile and cache schemas |
+| `lighthouse:multi-clear [schema]` | Clear cached schemas |
+| `lighthouse:multi-validate [schema]` | Validate schemas |
+| `lighthouse:multi-ide-helper [schema]` | Generate IDE helper files |
 
-The lighthouse:clear-cache command is used to manage the cache for your GraphQL schemas. Below are the available usages:
+All commands operate on **all schemas** when called without an argument, or on a **specific schema** when a name is provided.
 
-**1 - Clear Default Schema Cache**
+---
 
-The following command removes the default schema cache:
+### Cache Management
 
-```
-php artisan lighthouse:clear-cache
-```
-
-**2 - Clear All Schema Caches**
-
-To clear the cache for all GraphQL schemas, run:
-
-```
-php artisan lighthouse:clear-cache all
-```
-
-This deletes all cached schema files, ensuring any changes made to the schemas are reflected the next time they are accessed.
-
-**3 - Clear Cache for a Specific Schema**
-
-You can also clear the cache for any other schema by replacing `{keyYourSchema}` with the desired schema name:
-
-```
-php artisan lighthouse:clear-cache {keyYourSchema}
-```
-
-example:
-```
-php artisan lighthouse:clear-cache schema1
-```
-
-Replace `{keyYourSchema}` with the actual name of the schema you want to target. This will specifically remove the cache for that schema only.
-
-#### IDE Helper Generation
-
-Generate IDE helper files for improved type checking and autocompletion:
+Warm the schema cache before deployment to avoid cold-start latency in production.
 
 ```bash
-# Generate for default schema
-php artisan lighthouse:multi-ide-helper
+# Cache all schemas
+php artisan lighthouse:multi-cache
 
-# Generate for specific schema
-php artisan lighthouse:multi-ide-helper --schema=library
+# Cache a specific schema
+php artisan lighthouse:multi-cache admin
+
+# Clear all caches
+php artisan lighthouse:multi-clear
+
+# Clear a specific schema cache
+php artisan lighthouse:multi-clear admin
 ```
 
-This creates schema-specific helper files:
+### Schema Validation
+
+Catch syntax, type, and directive errors before they reach production.
+
+```bash
+# Validate all schemas
+php artisan lighthouse:multi-validate
+
+# Validate a specific schema
+php artisan lighthouse:multi-validate admin
+```
+
+### IDE Helper Generation
+
+Generate per-schema autocompletion files for your IDE.
+
+```bash
+# Generate for all schemas
+php artisan lighthouse:multi-ide-helper
+
+# Generate for a specific schema
+php artisan lighthouse:multi-ide-helper admin
+```
+
+Generated files per schema:
 - `schema-directives-{schema}.graphql`
 - `programmatic-types-{schema}.graphql`
-- `_lighthouse_ide_helper.php` (for default schema only)
+- `_lighthouse_ide_helper.php` (default schema only)
 
-#### Schema Validation
-
-Validate GraphQL schemas to catch errors before deployment:
-
-```bash
-# Validate default schema
-php artisan lighthouse:multi-validate-schema
-
-# Validate specific schema
-php artisan lighthouse:multi-validate-schema --schema=library
+Add these to `.gitignore`:
+```gitignore
+schema-directives*.graphql
+programmatic-types*.graphql
+_lighthouse_ide_helper.php
 ```
 
-**Supported Error Types:**
-- Syntax errors (malformed GraphQL)
-- Type errors (undefined types)
-- Directive errors (undefined directives)
-- Structural errors (invalid schema structure)
+### CI/CD Integration
 
-**CI/CD Integration:**
-```bash
-# Add to your deployment pipeline
-php artisan lighthouse:multi-validate-schema
-php artisan lighthouse:multi-ide-helper
+```yaml
+# .github/workflows/deploy.yml
+- name: Validate GraphQL schemas
+  run: php artisan lighthouse:multi-validate
+
+- name: Warm schema cache
+  run: php artisan lighthouse:multi-cache
 ```
 
-### Endpoint Schemas
+---
 
-Schema 1: Access the GraphQL schema at:
-```domain.local/schema1-graphql```
+## ⚡ Octane / Long-lived Workers
 
-Schema 2: Access the GraphQL schema at:
-```domain.local/schema2-graphql```
+The package is designed for use with **Laravel Octane** (Swoole, RoadRunner, FrankenPHP). Schema services are cached per-schema per-worker using `SchemaKeyedContainer`, so each schema is built exactly once per worker lifetime - eliminating redundant AST parsing on every request without state pollution between schemas.
 
-Schema 3: Access the GraphQL schema at:
-```domain.local/schema3-graphql```
+---
 
-### Usage
+## 🔄 Upgrading from v2.2
 
-Once configured, you can use the defined routes for each schema in your application. Each route will utilize its corresponding GraphQL schema. You have a multi-schema setup that allows for an unlimited number of access points, each supporting various mutations and queries tailored to your specific needs. You can define each schema according to your project requirements.
-This flexibility allows you to create distinct schemas for different parts of your application, ensuring that each area can have customized queries and mutations as needed.
+**Deprecated flag syntax** — the `--schema=` flag is replaced by a positional argument. It remains supported with a deprecation warning.
 
-## Author
+| Old syntax (still works) | New syntax |
+|---|---|
+| `lighthouse:multi-validate-schema --schema=admin` | `lighthouse:multi-validate admin` |
+| `lighthouse:multi-ide-helper --schema=admin` | `lighthouse:multi-ide-helper admin` |
+| `lighthouse:clear-cache all` | `lighthouse:multi-clear` |
 
-**Alexander Yakovenko**  
-Backend Engineer (Laravel, GraphQL, High-load systems)  
-- [GitHub](https://github.com/as-yakovenko) 
-- [Email](mailto:paffen.web@gmail.com)
+**New commands in v2.3**
+
+| Command | Notes |
+|---|---|
+| `lighthouse:multi-cache` | No equivalent in previous versions |
+| `lighthouse:multi-clear` | Standalone command. No argument = clears **all** schemas |
+
+> `lighthouse:clear-cache` is unchanged — without an argument it still clears only the default schema. Use `lighthouse:multi-clear` to clear all schemas at once.
+
+---
+
+## 📂 Directory Structure
+
+There is no required structure - organize schema files however fits your project.
+
+**Simple** (small projects or API versioning)
+```
+graphql/
+├── schema.graphql      # default Lighthouse schema
+├── v1.graphql          # #import models/*.graphql, #import v1/request/*.graphql
+├── v2.graphql          # #import models/*.graphql, #import v2/request/*.graphql
+├── models/             # shared Types, Enums, Inputs across all schemas
+│   ├── User.graphql
+│   ├── Order.graphql
+│   └── Product.graphql
+├── v1/
+│   └── request/
+│       ├── user_request.graphql
+│       └── order_request.graphql
+└── v2/
+    └── request/
+        ├── user_request.graphql
+        └── order_request.graphql
+```
+
+**By API surface** (recommended - admin, app, public, etc.)
+```
+graphql/
+├── models/                     # shared Types, Enums, Inputs for all schemas
+│   ├── User.graphql
+│   ├── Order.graphql
+│   └── Product.graphql
+│
+├── admin/
+│   ├── api_admin.graphql       # entry point: #import ../models/*.graphql
+│   └── request/                #              #import admin/request/*.graphql
+│       ├── user_admin.graphql
+│       └── order_admin.graphql
+│
+├── app/
+│   ├── api_app.graphql         # entry point: #import ../models/*.graphql
+│   └── request/                #              #import app/request/*.graphql
+│       ├── user_app.graphql
+│       └── order_app.graphql
+│
+└── public/
+    ├── api_public.graphql
+    └── request/
+        └── product_public.graphql
+```
+
+Each schema folder has a single entry point file that stitches together shared models and its own requests via `#import`. This keeps schemas fully isolated while sharing common type definitions.
+
+---
+
+## 📄 Changelog
+
+See [Releases](https://github.com/as-yakovenko/laravel-lighthouse-graphql-multi-schema/releases) for the full release history.
+
+---
+
+## 🤝 Contributing
+
+Bug reports and pull requests are welcome on [GitHub](https://github.com/as-yakovenko/laravel-lighthouse-graphql-multi-schema). Please open an issue before submitting large changes.
+
+---
+
+## License
+
+MIT. See [LICENSE](LICENSE) for details.
+
+---
+
+**Author:** [Alexander Yakovenko](https://github.com/as-yakovenko) - Senior Software Engineer specializing in Laravel, GraphQL, and high-load systems.
