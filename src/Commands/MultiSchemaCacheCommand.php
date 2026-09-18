@@ -5,7 +5,9 @@ namespace Yakovenko\LighthouseGraphqlMultiSchema\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Events\Dispatcher;
 use Nuwave\Lighthouse\Schema\AST\ASTBuilder;
+use Nuwave\Lighthouse\Schema\AST\ASTCache;
 use Nuwave\Lighthouse\Schema\DirectiveLocator;
+use Nuwave\Lighthouse\Schema\Source\SchemaSourceProvider;
 use Nuwave\Lighthouse\Schema\Source\SchemaStitcher;
 use Yakovenko\LighthouseGraphqlMultiSchema\Services\GraphQLSchemaConfig;
 use Yakovenko\LighthouseGraphqlMultiSchema\Services\SchemaSpecificASTCache;
@@ -73,6 +75,9 @@ class MultiSchemaCacheCommand extends Command
             $schemaSourceProvider = new SchemaStitcher( $schemaPath );
             $astCache             = new SchemaSpecificASTCache( $cachePath );
 
+            app()->instance(SchemaSourceProvider::class, $schemaSourceProvider);
+            app()->instance(ASTCache::class, $astCache);
+
             $astBuilder = new ASTBuilder(
                 app( DirectiveLocator::class ),
                 $schemaSourceProvider,
@@ -80,14 +85,20 @@ class MultiSchemaCacheCommand extends Command
                 $astCache,
             );
 
+            app()->instance(ASTBuilder::class, $astBuilder);
+
             $astCache->set( $astBuilder->build() );
 
             $this->info( "  ✓ '{$schemaKey}' → {$cachePath}" );
 
             return true;
-        } catch ( \Throwable $e ) {
-            $this->error( "  ✗ '{$schemaKey}' failed: {$e->getMessage()}" );
+        } catch (\Throwable $e) {
+            $this->error("  ✗ '{$schemaKey}' failed: {$e->getMessage()}");
             return false;
+        } finally {
+            app()->forgetInstance(SchemaSourceProvider::class);
+            app()->forgetInstance(ASTCache::class);
+            app()->forgetInstance(ASTBuilder::class);
         }
     }
 
